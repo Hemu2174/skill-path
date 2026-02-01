@@ -8,7 +8,9 @@ import {
   Award,
   Settings,
   LogOut,
-  Sparkles
+  Sparkles,
+  MessageSquare,
+  Rocket
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -19,6 +21,8 @@ const navigation = [
   { name: 'Roadmap', href: '/roadmap', icon: Map },
   { name: 'Progress', href: '/progress', icon: BarChart3 },
   { name: 'Schedule', href: '/schedule', icon: Calendar },
+  { name: 'Weekly Check-in', href: '/weekly-checkin', icon: MessageSquare },
+  { name: 'Capstone', href: '/capstone', icon: Rocket },
   { name: 'Certificates', href: '/certificates', icon: Award },
 ];
 

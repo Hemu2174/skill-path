@@ -13,6 +13,8 @@ import Roadmap from "./pages/Roadmap";
 import Progress from "./pages/Progress";
 import Schedule from "./pages/Schedule";
 import Certificates from "./pages/Certificates";
+import WeeklyCheckin from "./pages/WeeklyCheckin";
+import Capstone from "./pages/Capstone";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -124,6 +126,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Certificates />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/weekly-checkin"
+        element={
+          <ProtectedRoute>
+            <WeeklyCheckin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/capstone"
+        element={
+          <ProtectedRoute>
+            <Capstone />
           </ProtectedRoute>
         }
       />

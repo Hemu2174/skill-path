@@ -8,9 +8,7 @@ import {
   Target, 
   BookOpen, 
   BarChart3, 
-  Award,
   CheckCircle2,
-  Users,
   Star
 } from 'lucide-react';
 
@@ -29,11 +27,6 @@ const features = [
     icon: BarChart3,
     title: 'Progress Tracking',
     description: 'Monitor your growth with detailed analytics and weekly reports.',
-  },
-  {
-    icon: Award,
-    title: 'Earn Certificates',
-    description: 'Showcase your skills with certificates upon completing learning paths.',
   },
 ];
 

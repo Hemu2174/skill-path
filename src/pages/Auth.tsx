@@ -71,7 +71,6 @@ export default function Auth() {
     'Personalized learning roadmaps',
     'AI-powered skill recommendations',
     'Track your progress weekly',
-    'Earn certificates',
   ];
 
   return (

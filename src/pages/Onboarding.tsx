@@ -129,26 +129,156 @@ export default function Onboarding() {
       if (assessmentError) throw assessmentError;
 
       // Create initial roadmap
-      const { error: roadmapError } = await supabase
+      const roleName = careerRoles.find(r => r.id === targetRole)?.name || 'Developer';
+      const { data: roadmapData, error: roadmapError } = await supabase
         .from('roadmaps')
         .insert({
           user_id: user.id,
-          title: `${careerRoles.find(r => r.id === targetRole)?.name} Learning Path`,
-          description: `Personalized learning path to become a ${careerRoles.find(r => r.id === targetRole)?.name}`,
+          title: `${roleName} Learning Path`,
+          description: `Personalized learning path to become a ${roleName}`,
           duration_weeks: 6,
           start_date: new Date().toISOString().split('T')[0],
           status: 'active',
-        });
+        })
+        .select()
+        .single();
 
       if (roadmapError) throw roadmapError;
 
-      toast.success('Setup complete! Generating your personalized roadmap...');
+      // Generate mock weeks and tasks based on role
+      const weekTemplates = generateWeekTemplates(targetRole, roleName);
+      
+      for (let i = 0; i < weekTemplates.length; i++) {
+        const weekTemplate = weekTemplates[i];
+        const { data: weekData, error: weekError } = await supabase
+          .from('roadmap_weeks')
+          .insert({
+            roadmap_id: roadmapData.id,
+            week_number: i + 1,
+            title: weekTemplate.title,
+            description: weekTemplate.description,
+            is_current: i === 0,
+          })
+          .select()
+          .single();
+
+        if (weekError) throw weekError;
+
+        // Insert tasks for this week
+        const tasksToInsert = weekTemplate.tasks.map((task, taskIndex) => ({
+          week_id: weekData.id,
+          user_id: user.id,
+          title: task.title,
+          description: task.description,
+          task_type: task.type,
+          duration_minutes: task.duration,
+          order_index: taskIndex,
+          is_completed: false,
+        }));
+
+        const { error: tasksError } = await supabase
+          .from('tasks')
+          .insert(tasksToInsert);
+
+        if (tasksError) throw tasksError;
+      }
+
+      toast.success('Setup complete! Your personalized roadmap is ready.');
       navigate('/dashboard');
     } catch (error: any) {
+      console.error('Onboarding error:', error);
       toast.error(error.message || 'Failed to save your preferences');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const generateWeekTemplates = (role: string, roleName: string) => {
+    const baseWeeks = [
+      {
+        title: 'Foundations & Setup',
+        description: 'Get your development environment ready and learn the basics',
+        tasks: [
+          { title: 'Set up development environment', type: 'lesson', duration: 30, description: 'Install required tools and configure your workspace' },
+          { title: 'Learn core fundamentals', type: 'lesson', duration: 45, description: 'Understand the basic concepts and principles' },
+          { title: 'Complete basics quiz', type: 'quiz', duration: 20, description: 'Test your understanding of the fundamentals' },
+          { title: 'Build a simple starter project', type: 'project', duration: 90, description: 'Apply what you learned in a hands-on project' },
+        ],
+      },
+      {
+        title: 'Core Concepts',
+        description: 'Deep dive into essential concepts and patterns',
+        tasks: [
+          { title: 'Study core architecture patterns', type: 'lesson', duration: 60, description: 'Learn about common design patterns' },
+          { title: 'Practice with exercises', type: 'lesson', duration: 45, description: 'Reinforce learning with practice exercises' },
+          { title: 'Knowledge check quiz', type: 'quiz', duration: 25, description: 'Assess your understanding of core concepts' },
+          { title: 'Build an interactive component', type: 'project', duration: 120, description: 'Create a functional component from scratch' },
+        ],
+      },
+      {
+        title: 'Intermediate Skills',
+        description: 'Level up with intermediate techniques',
+        tasks: [
+          { title: 'Advanced techniques deep dive', type: 'lesson', duration: 60, description: 'Explore more advanced techniques' },
+          { title: 'State management patterns', type: 'lesson', duration: 45, description: 'Learn effective state management' },
+          { title: 'Performance optimization', type: 'lesson', duration: 45, description: 'Understand how to optimize your code' },
+          { title: 'Build a feature-rich app', type: 'project', duration: 180, description: 'Create a more complex application' },
+        ],
+      },
+      {
+        title: 'Advanced Topics',
+        description: 'Master advanced concepts and best practices',
+        tasks: [
+          { title: 'Advanced patterns & techniques', type: 'lesson', duration: 60, description: 'Learn industry best practices' },
+          { title: 'Security best practices', type: 'lesson', duration: 45, description: 'Understand security considerations' },
+          { title: 'Advanced concepts quiz', type: 'quiz', duration: 30, description: 'Test your advanced knowledge' },
+          { title: 'Implement secure features', type: 'project', duration: 150, description: 'Apply security best practices in a project' },
+        ],
+      },
+      {
+        title: 'Testing & Quality',
+        description: 'Learn testing strategies and code quality practices',
+        tasks: [
+          { title: 'Unit testing fundamentals', type: 'lesson', duration: 45, description: 'Learn how to write effective unit tests' },
+          { title: 'Integration testing', type: 'lesson', duration: 45, description: 'Understand integration testing strategies' },
+          { title: 'Code quality tools', type: 'lesson', duration: 30, description: 'Use linting and formatting tools' },
+          { title: 'Add tests to your project', type: 'project', duration: 120, description: 'Write tests for your existing code' },
+        ],
+      },
+      {
+        title: 'Capstone Project',
+        description: 'Put it all together in a comprehensive project',
+        tasks: [
+          { title: 'Project planning & design', type: 'lesson', duration: 45, description: 'Plan your capstone project' },
+          { title: 'Build your capstone project', type: 'project', duration: 300, description: 'Create a portfolio-worthy project' },
+          { title: 'Code review & refinement', type: 'quiz', duration: 60, description: 'Review and improve your code' },
+          { title: 'Final presentation prep', type: 'project', duration: 45, description: 'Prepare to showcase your work' },
+        ],
+      },
+    ];
+
+    // Customize task titles based on role
+    const roleSpecificTitles: Record<string, string> = {
+      'frontend': 'React & TypeScript',
+      'backend': 'Node.js & APIs',
+      'fullstack': 'Full Stack Development',
+      'data-science': 'Data Analysis & Python',
+      'ml-engineer': 'Machine Learning',
+      'devops': 'CI/CD & Infrastructure',
+      'mobile': 'Mobile Development',
+      'cloud': 'Cloud Architecture',
+    };
+
+    const specialty = roleSpecificTitles[role] || roleName;
+    
+    return baseWeeks.map((week, index) => ({
+      ...week,
+      title: `Week ${index + 1}: ${week.title}`,
+      tasks: week.tasks.map(task => ({
+        ...task,
+        title: index === 0 ? task.title : `${specialty}: ${task.title}`,
+      })),
+    }));
   };
 
   const calculateScore = () => {

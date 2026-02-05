@@ -14,7 +14,7 @@ import Progress from "./pages/Progress";
 import Schedule from "./pages/Schedule";
 
 import WeeklyCheckin from "./pages/WeeklyCheckin";
-import Capstone from "./pages/Capstone";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -126,14 +126,6 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <WeeklyCheckin />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/capstone"
-        element={
-          <ProtectedRoute>
-            <Capstone />
           </ProtectedRoute>
         }
       />

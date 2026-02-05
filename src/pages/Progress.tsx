@@ -3,22 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress as ProgressBar } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   TrendingUp, 
-  TrendingDown, 
   Clock, 
   Target, 
   Flame,
   Award,
-  Calendar,
   ArrowUp,
   ChevronRight,
-  Zap
+  Loader2
 } from 'lucide-react';
 import { 
-  AreaChart, 
-  Area, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -26,26 +21,12 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  LineChart,
+  AreaChart,
+  Area,
+  ComposedChart,
   Line
 } from 'recharts';
-
-const weeklyData = [
-  { day: 'Mon', hours: 2.5, tasks: 4 },
-  { day: 'Tue', hours: 1.8, tasks: 3 },
-  { day: 'Wed', hours: 3.2, tasks: 5 },
-  { day: 'Thu', hours: 2.0, tasks: 3 },
-  { day: 'Fri', hours: 4.1, tasks: 6 },
-  { day: 'Sat', hours: 1.5, tasks: 2 },
-  { day: 'Sun', hours: 2.8, tasks: 4 },
-];
-
-const monthlyProgress = [
-  { week: 'Week 1', score: 65, target: 70 },
-  { week: 'Week 2', score: 72, target: 75 },
-  { week: 'Week 3', score: 78, target: 80 },
-  { week: 'Week 4', score: 85, target: 85 },
-];
+import { useProgressData } from '@/hooks/useProgressData';
 
 const skillsData = [
   { skill: 'React', level: 75, change: 12 },
@@ -64,6 +45,22 @@ const achievements = [
 ];
 
 export default function Progress() {
+  const { taskCompletionData, stats, loading } = useProgressData();
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Progress">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const completionPercentage = stats.totalTasks > 0 
+    ? Math.round((stats.completedTasks / stats.totalTasks) * 100) 
+    : 0;
+
   return (
     <DashboardLayout title="Progress">
       <div className="space-y-6">
@@ -73,11 +70,11 @@ export default function Progress() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">This Week</p>
-                  <p className="text-2xl font-bold">17.9h</p>
+                  <p className="text-sm text-muted-foreground">Hours Spent</p>
+                  <p className="text-2xl font-bold">{stats.hoursSpent}h</p>
                   <div className="flex items-center gap-1 text-sm text-success mt-1">
                     <ArrowUp className="w-3 h-3" />
-                    <span>+23% vs last week</span>
+                    <span>Learning time</span>
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-primary/10 text-primary">
@@ -92,10 +89,10 @@ export default function Progress() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Tasks Done</p>
-                  <p className="text-2xl font-bold">27</p>
+                  <p className="text-2xl font-bold">{stats.completedTasks}/{stats.totalTasks}</p>
                   <div className="flex items-center gap-1 text-sm text-success mt-1">
                     <ArrowUp className="w-3 h-3" />
-                    <span>+8 this week</span>
+                    <span>{completionPercentage}% complete</span>
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-chart-2/10 text-chart-2">
@@ -110,8 +107,10 @@ export default function Progress() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Current Streak</p>
-                  <p className="text-2xl font-bold">12 days</p>
-                  <p className="text-sm text-muted-foreground mt-1">Personal best!</p>
+                  <p className="text-2xl font-bold">{stats.currentStreak} days</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {stats.currentStreak > 0 ? 'Keep it up!' : 'Start today!'}
+                  </p>
                 </div>
                 <div className="p-3 rounded-xl bg-warning/10 text-warning">
                   <Flame className="w-6 h-6" />
@@ -138,94 +137,122 @@ export default function Progress() {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Weekly Activity */}
+          {/* Task Completion Over Time */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Weekly Activity</CardTitle>
-                  <CardDescription>Hours spent learning each day</CardDescription>
+                  <CardTitle>Task Completion Over Time</CardTitle>
+                  <CardDescription>Completed vs total tasks by week</CardDescription>
                 </div>
-                <Badge variant="secondary">This week</Badge>
+                <Badge variant="secondary">Real-time</Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Bar 
-                      dataKey="hours" 
-                      fill="hsl(var(--primary))" 
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Monthly Progress */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Progress Score</CardTitle>
-                  <CardDescription>Your score vs target</CardDescription>
-                </div>
-                <Badge variant="secondary">This month</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyProgress}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[50, 100]} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="score" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={{ fill: 'hsl(var(--primary))' }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="target" 
-                      stroke="hsl(var(--muted-foreground))" 
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {taskCompletionData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={taskCompletionData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <Bar 
+                        dataKey="total" 
+                        fill="hsl(var(--muted))" 
+                        radius={[4, 4, 0, 0]}
+                        name="Total Tasks"
+                      />
+                      <Bar 
+                        dataKey="completed" 
+                        fill="hsl(var(--primary))" 
+                        radius={[4, 4, 0, 0]}
+                        name="Completed"
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    <p>Complete tasks to see your progress here</p>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-center gap-6 mt-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-primary" />
-                  <span className="text-sm text-muted-foreground">Your Score</span>
+                  <span className="text-sm text-muted-foreground">Completed</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Target</span>
+                  <div className="w-3 h-3 rounded-full bg-muted" />
+                  <span className="text-sm text-muted-foreground">Total</span>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Completion Rate Area Chart */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Completion Rate</CardTitle>
+                  <CardDescription>Task completion trend by week</CardDescription>
+                </div>
+                <Badge variant="secondary">Trending</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[280px]">
+                {taskCompletionData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart 
+                      data={taskCompletionData.map(d => ({
+                        ...d,
+                        rate: d.total > 0 ? Math.round((d.completed / d.total) * 100) : 0
+                      }))}
+                    >
+                      <defs>
+                        <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={12} 
+                        domain={[0, 100]}
+                        tickFormatter={(value) => `${value}%`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        formatter={(value) => [`${value}%`, 'Completion Rate']}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="rate" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                        fill="url(#colorRate)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    <p>Start completing tasks to track your progress</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

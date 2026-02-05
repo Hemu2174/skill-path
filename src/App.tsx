@@ -12,7 +12,7 @@ import Courses from "./pages/Courses";
 import Roadmap from "./pages/Roadmap";
 import Progress from "./pages/Progress";
 import Schedule from "./pages/Schedule";
-import Certificates from "./pages/Certificates";
+
 import WeeklyCheckin from "./pages/WeeklyCheckin";
 import Capstone from "./pages/Capstone";
 import NotFound from "./pages/NotFound";
@@ -118,14 +118,6 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Schedule />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/certificates"
-        element={
-          <ProtectedRoute>
-            <Certificates />
           </ProtectedRoute>
         }
       />

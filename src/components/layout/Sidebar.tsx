@@ -23,7 +23,6 @@ const navigation = [
   { name: 'Schedule', href: '/schedule', icon: Calendar },
   { name: 'Weekly Check-in', href: '/weekly-checkin', icon: MessageSquare },
   { name: 'Capstone', href: '/capstone', icon: Rocket },
-  { name: 'Certificates', href: '/certificates', icon: Award },
 ];
 
 export function Sidebar() {

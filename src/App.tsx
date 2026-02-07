@@ -14,7 +14,7 @@ import Progress from "./pages/Progress";
 import Schedule from "./pages/Schedule";
 
 import WeeklyCheckin from "./pages/WeeklyCheckin";
-
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -126,6 +126,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <WeeklyCheckin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         }
       />

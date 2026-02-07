@@ -27,14 +27,7 @@ import {
   Line
 } from 'recharts';
 import { useProgressData } from '@/hooks/useProgressData';
-
-const skillsData = [
-  { skill: 'React', level: 75, change: 12 },
-  { skill: 'TypeScript', level: 45, change: 8 },
-  { skill: 'CSS/Styling', level: 82, change: 5 },
-  { skill: 'JavaScript', level: 88, change: 3 },
-  { skill: 'Testing', level: 30, change: 15 },
-];
+import { useSkillsProgress } from '@/hooks/useSkillsProgress';
 
 const achievements = [
   { id: 1, title: 'First Steps', description: 'Complete your first lesson', earned: true, icon: '🎯' },
@@ -46,6 +39,7 @@ const achievements = [
 
 export default function Progress() {
   const { taskCompletionData, stats, loading } = useProgressData();
+  const { skills: skillsData, loading: skillsLoading } = useSkillsProgress();
 
   if (loading) {
     return (
@@ -275,21 +269,30 @@ export default function Progress() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {skillsData.map((skill) => (
-                <div key={skill.skill} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{skill.skill}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">{skill.level}%</span>
-                      <Badge variant="secondary" className="text-xs">
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                        +{skill.change}%
-                      </Badge>
-                    </div>
-                  </div>
-                  <ProgressBar value={skill.level} className="h-2" />
+              {skillsLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 </div>
-              ))}
+              ) : skillsData.length > 0 ? (
+                skillsData.map((skill) => (
+                  <div key={skill.skill} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{skill.skill}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{skill.level}%</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {skill.tasksCompleted}/{skill.totalTasks} tasks
+                        </Badge>
+                      </div>
+                    </div>
+                    <ProgressBar value={skill.level} className="h-2" />
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  Complete onboarding to see your skills progress
+                </p>
+              )}
             </CardContent>
           </Card>
 

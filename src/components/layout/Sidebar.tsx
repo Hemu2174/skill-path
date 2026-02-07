@@ -22,6 +22,7 @@ const navigation = [
   { name: 'Progress', href: '/progress', icon: BarChart3 },
   { name: 'Schedule', href: '/schedule', icon: Calendar },
   { name: 'Weekly Check-in', href: '/weekly-checkin', icon: MessageSquare },
+  { name: 'Next Level', href: '/next-level', icon: Rocket },
 ];
 
 export function Sidebar() {

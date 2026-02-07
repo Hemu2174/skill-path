@@ -15,6 +15,7 @@ import Schedule from "./pages/Schedule";
 
 import WeeklyCheckin from "./pages/WeeklyCheckin";
 import Settings from "./pages/Settings";
+import NextLevel from "./pages/NextLevel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -134,6 +135,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/next-level"
+        element={
+          <ProtectedRoute>
+            <NextLevel />
           </ProtectedRoute>
         }
       />

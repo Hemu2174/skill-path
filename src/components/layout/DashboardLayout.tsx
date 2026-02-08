@@ -1,9 +1,9 @@
 import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
-import { Search, Bell, MessageSquare, Sun, Moon } from 'lucide-react';
+import { Search, Bell, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useTheme } from '@/hooks/useTheme';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -11,7 +11,6 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children, title }: DashboardLayoutProps) {
-  const { theme, toggleTheme } = useTheme();
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -36,9 +35,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                 />
               </div>
               
-              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </Button>
+              <ThemeToggle />
 
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5" />

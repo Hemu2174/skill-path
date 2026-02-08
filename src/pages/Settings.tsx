@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme, ThemeMode } from '@/hooks/useTheme';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,9 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { User, Target, Clock, Save, Loader2 } from 'lucide-react';
+import { User, Target, Clock, Save, Loader2, Sun, Moon, Monitor } from 'lucide-react';
 
 const careerRoles = [
   { id: 'frontend', name: 'Frontend Developer' },
@@ -31,6 +31,7 @@ const experienceLevels = [
 
 export default function Settings() {
   const { user } = useAuth();
+  const { mode, setMode } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -200,6 +201,41 @@ export default function Settings() {
                   </div>
                 ))}
               </RadioGroup>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Theme Preference */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sun className="w-5 h-5 text-primary" />
+              Theme Preference
+            </CardTitle>
+            <CardDescription>Choose how the app looks</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3">
+              {([
+                { id: 'light' as ThemeMode, label: 'Light', icon: Sun },
+                { id: 'dark' as ThemeMode, label: 'Dark', icon: Moon },
+                { id: 'system' as ThemeMode, label: 'System', icon: Monitor },
+              ]).map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setMode(option.id)}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all cursor-pointer ${
+                    mode === option.id
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <option.icon className={`w-6 h-6 ${mode === option.id ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className={`text-sm font-medium ${mode === option.id ? 'text-foreground' : 'text-muted-foreground'}`}>
+                    {option.label}
+                  </span>
+                </button>
+              ))}
             </div>
           </CardContent>
         </Card>

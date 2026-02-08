@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { AIMentorCard } from '@/components/AIMentorCard';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,28 +33,12 @@ interface WeeklyReport {
   created_at: string;
 }
 
-// Mock AI feedback generator (simulating external AI service response)
-const generateAIFeedback = (tasksCompleted: number, hoursSpent: number, progressScore: number): string => {
-  const feedbackOptions = [
-    {
-      condition: progressScore >= 80,
-      feedback: `🎉 Outstanding week! You've completed ${tasksCompleted} tasks and invested ${hoursSpent} hours in your growth. Your dedication is paying off - you're well on track to achieve your learning goals. Keep pushing forward!`
-    },
-    {
-      condition: progressScore >= 60,
-      feedback: `💪 Great progress this week! You completed ${tasksCompleted} tasks over ${hoursSpent} hours. Consider focusing on practice exercises to strengthen your hands-on skills. You're building momentum!`
-    },
-    {
-      condition: progressScore >= 40,
-      feedback: `📈 You're making steady progress with ${tasksCompleted} tasks completed. To accelerate your learning, try dedicating focused 25-minute sessions without distractions. Small consistent efforts lead to big results!`
-    },
-    {
-      condition: true,
-      feedback: `🌱 Every step counts! You completed ${tasksCompleted} tasks this week. Consider breaking down complex topics into smaller chunks and celebrate small wins. Remember, consistency beats intensity in learning!`
-    }
-  ];
-
-  return feedbackOptions.find(option => option.condition)?.feedback || feedbackOptions[3].feedback;
+// Simple local feedback used when storing weekly report summary
+const generateLocalFeedback = (tasksCompleted: number, hoursSpent: number, progressScore: number): string => {
+  if (progressScore >= 80) return `Outstanding week! ${tasksCompleted} tasks completed in ${hoursSpent}h. Keep it up!`;
+  if (progressScore >= 60) return `Great progress! ${tasksCompleted} tasks over ${hoursSpent}h. Focus on practice next.`;
+  if (progressScore >= 40) return `Steady progress with ${tasksCompleted} tasks. Try focused 25-min sessions.`;
+  return `${tasksCompleted} tasks this week. Break topics into smaller chunks and stay consistent!`;
 };
 
 export default function WeeklyCheckin() {
@@ -149,7 +134,7 @@ export default function WeeklyCheckin() {
     setSubmitting(true);
     
     try {
-      const aiFeedback = generateAIFeedback(
+      const aiFeedback = generateLocalFeedback(
         weekStats.tasksCompleted,
         weekStats.hoursSpent,
         weekStats.progressScore
@@ -325,6 +310,9 @@ export default function WeeklyCheckin() {
             </CardContent>
           </Card>
         )}
+
+        {/* AI Mentor - Personalized Recommendations */}
+        <AIMentorCard />
 
         {/* Tips Section */}
         <Card>

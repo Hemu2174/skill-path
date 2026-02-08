@@ -10,7 +10,8 @@ import {
   LogOut,
   Sparkles,
   MessageSquare,
-  Rocket
+  Rocket,
+  Bookmark
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Progress', href: '/progress', icon: BarChart3 },
   { name: 'Schedule', href: '/schedule', icon: Calendar },
   { name: 'Weekly Check-in', href: '/weekly-checkin', icon: MessageSquare },
+  { name: 'Saved Insights', href: '/saved-recommendations', icon: Bookmark },
   { name: 'Next Level', href: '/next-level', icon: Rocket },
 ];
 

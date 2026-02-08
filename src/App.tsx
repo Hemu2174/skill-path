@@ -17,6 +17,7 @@ import Schedule from "./pages/Schedule";
 import WeeklyCheckin from "./pages/WeeklyCheckin";
 import Settings from "./pages/Settings";
 import NextLevel from "./pages/NextLevel";
+import SavedRecommendations from "./pages/SavedRecommendations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -144,6 +145,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <NextLevel />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/saved-recommendations"
+        element={
+          <ProtectedRoute>
+            <SavedRecommendations />
           </ProtectedRoute>
         }
       />

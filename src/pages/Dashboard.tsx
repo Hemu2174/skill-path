@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { AIMentorCard } from '@/components/AIMentorCard';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -434,6 +435,9 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Mentor Widget */}
+        <AIMentorCard compact />
       </div>
     </DashboardLayout>
   );

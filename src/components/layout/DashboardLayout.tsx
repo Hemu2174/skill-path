@@ -1,9 +1,10 @@
 import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
-import { Search, Bell, MessageSquare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationsPopover } from '@/components/NotificationsPopover';
+import { MessagesPopover } from '@/components/MessagesPopover';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -36,15 +37,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               </div>
               
               <ThemeToggle />
-
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
-              </Button>
-              
-              <Button variant="ghost" size="icon">
-                <MessageSquare className="w-5 h-5" />
-              </Button>
+              <NotificationsPopover />
+              <MessagesPopover />
             </div>
           </div>
         </header>

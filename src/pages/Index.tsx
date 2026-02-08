@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Star
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const features = [
   {
@@ -77,6 +78,7 @@ export default function Index() {
           </div>
           
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Button variant="ghost" onClick={() => navigate('/auth')}>
               Sign In
             </Button>

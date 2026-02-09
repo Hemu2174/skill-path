@@ -1,1 +1,7 @@
 project_id = "jykkfifbmnivnssywbxh"
+
+[functions.ai-mentor]
+verify_jwt = false
+
+[functions.weekly-feedback]
+verify_jwt = false

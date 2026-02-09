@@ -10,10 +10,12 @@ import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Courses from "./pages/Courses";
+import CourseLearning from "./pages/CourseLearning";
+import WeeklyTest from "./pages/WeeklyTest";
+import FinalAssessment from "./pages/FinalAssessment";
 import Roadmap from "./pages/Roadmap";
 import Progress from "./pages/Progress";
 import Schedule from "./pages/Schedule";
-
 import WeeklyCheckin from "./pages/WeeklyCheckin";
 import Settings from "./pages/Settings";
 import NextLevel from "./pages/NextLevel";
@@ -68,94 +70,20 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
-      <Route
-        path="/auth"
-        element={
-          <PublicRoute>
-            <Auth />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/onboarding"
-        element={
-          <ProtectedRoute>
-            <Onboarding />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/courses"
-        element={
-          <ProtectedRoute>
-            <Courses />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/roadmap"
-        element={
-          <ProtectedRoute>
-            <Roadmap />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/progress"
-        element={
-          <ProtectedRoute>
-            <Progress />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/schedule"
-        element={
-          <ProtectedRoute>
-            <Schedule />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/weekly-checkin"
-        element={
-          <ProtectedRoute>
-            <WeeklyCheckin />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/next-level"
-        element={
-          <ProtectedRoute>
-            <NextLevel />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/saved-recommendations"
-        element={
-          <ProtectedRoute>
-            <SavedRecommendations />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
+      <Route path="/learn/:weekId" element={<ProtectedRoute><CourseLearning /></ProtectedRoute>} />
+      <Route path="/weekly-test/:weekId" element={<ProtectedRoute><WeeklyTest /></ProtectedRoute>} />
+      <Route path="/final-assessment" element={<ProtectedRoute><FinalAssessment /></ProtectedRoute>} />
+      <Route path="/roadmap" element={<ProtectedRoute><Roadmap /></ProtectedRoute>} />
+      <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
+      <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
+      <Route path="/weekly-checkin" element={<ProtectedRoute><WeeklyCheckin /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="/next-level" element={<ProtectedRoute><NextLevel /></ProtectedRoute>} />
+      <Route path="/saved-recommendations" element={<ProtectedRoute><SavedRecommendations /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

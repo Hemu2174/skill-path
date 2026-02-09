@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getCourseContent } from '@/data/courseContent';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -145,33 +146,63 @@ export default function Onboarding() {
 
       if (roadmapError) throw roadmapError;
 
-      // Generate mock weeks and tasks based on role
-      const weekTemplates = generateWeekTemplates(targetRole, roleName);
+      // Get structured course content with real videos and test questions
+      const courseContent = getCourseContent(targetRole);
       
-      for (let i = 0; i < weekTemplates.length; i++) {
-        const weekTemplate = weekTemplates[i];
-        const { data: weekData, error: weekError } = await supabase
-          .from('roadmap_weeks')
+      for (let i = 0; i < courseContent.length; i++) {
+        const weekContent = courseContent[i];
+        const { data: weekData, error: weekError } = await (supabase
+          .from('roadmap_weeks') as any)
           .insert({
             roadmap_id: roadmapData.id,
             week_number: i + 1,
-            title: weekTemplate.title,
-            description: weekTemplate.description,
+            title: weekContent.title,
+            description: weekContent.description,
             is_current: i === 0,
+            status: 'locked',
           })
           .select()
           .single();
 
         if (weekError) throw weekError;
 
-        // Insert tasks for this week
-        const tasksToInsert = weekTemplate.tasks.map((task, taskIndex) => ({
+        // Insert concepts with real YouTube videos
+        const conceptsToInsert = weekContent.concepts.map((concept, idx) => ({
           week_id: weekData.id,
           user_id: user.id,
-          title: task.title,
-          description: task.description,
-          task_type: task.type,
-          duration_minutes: task.duration,
+          title: concept.title,
+          description: concept.description,
+          video_url: concept.videoId,
+          video_required_seconds: concept.videoRequiredSeconds,
+          order_index: idx,
+        }));
+
+        const { error: conceptsError } = await (supabase
+          .from('concepts' as any) as any)
+          .insert(conceptsToInsert);
+
+        if (conceptsError) throw conceptsError;
+
+        // Insert weekly test with real questions
+        const { error: testError } = await supabase
+          .from('weekly_tests' as any)
+          .insert({
+            week_id: weekData.id,
+            user_id: user.id,
+            questions: weekContent.testQuestions,
+            pass_threshold: 60,
+          } as any);
+
+        if (testError) throw testError;
+
+        // Also insert legacy tasks for backward compatibility with dashboard stats
+        const tasksToInsert = weekContent.concepts.map((concept, taskIndex) => ({
+          week_id: weekData.id,
+          user_id: user.id,
+          title: concept.title,
+          description: concept.description,
+          task_type: 'lesson' as const,
+          duration_minutes: Math.ceil(concept.videoRequiredSeconds / 60) + 30, // video + practice time
           order_index: taskIndex,
           is_completed: false,
         }));
@@ -183,8 +214,8 @@ export default function Onboarding() {
         if (tasksError) throw tasksError;
       }
 
-      toast.success('Setup complete! Your personalized roadmap is ready.');
-      navigate('/dashboard');
+      toast.success('Setup complete! Your personalized course is ready.');
+      navigate('/courses');
     } catch (error: any) {
       console.error('Onboarding error:', error);
       toast.error(error.message || 'Failed to save your preferences');

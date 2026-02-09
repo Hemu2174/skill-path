@@ -1,244 +1,288 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useCourseData } from '@/hooks/useCourseData';
+import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Play, 
-  Clock, 
-  BookOpen, 
-  Users, 
-  Star,
+import { toast } from 'sonner';
+import {
+  Play,
+  Clock,
+  BookOpen,
+  Lock,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
   ChevronRight,
-  Filter
+  Sparkles,
+  Trophy,
+  Award,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-const activeCourses = [
-  {
-    id: 1,
-    title: 'React Fundamentals',
-    description: 'Learn the core concepts of React including components, state, and props',
-    image: '🚀',
-    progress: 65,
-    lessonsCompleted: 8,
-    totalLessons: 12,
-    duration: '4 hours',
-    category: 'Frontend',
-  },
-  {
-    id: 2,
-    title: 'TypeScript Essentials',
-    description: 'Master TypeScript for better code quality and developer experience',
-    image: '📘',
-    progress: 30,
-    lessonsCompleted: 3,
-    totalLessons: 10,
-    duration: '3 hours',
-    category: 'Programming',
-  },
-  {
-    id: 3,
-    title: 'Modern CSS Techniques',
-    description: 'Advanced CSS with Flexbox, Grid, and modern layout patterns',
-    image: '🎨',
-    progress: 85,
-    lessonsCompleted: 11,
-    totalLessons: 13,
-    duration: '2.5 hours',
-    category: 'Frontend',
-  },
-];
-
-const recommendedCourses = [
-  {
-    id: 4,
-    title: 'State Management with Zustand',
-    description: 'Simple and powerful state management for React applications',
-    image: '🐻',
-    duration: '2 hours',
-    lessons: 8,
-    rating: 4.8,
-    students: 1240,
-    category: 'Frontend',
-  },
-  {
-    id: 5,
-    title: 'API Design Best Practices',
-    description: 'Design RESTful APIs that are scalable and maintainable',
-    image: '⚙️',
-    duration: '3 hours',
-    lessons: 10,
-    rating: 4.9,
-    students: 890,
-    category: 'Backend',
-  },
-  {
-    id: 6,
-    title: 'Testing React Applications',
-    description: 'Write comprehensive tests with Jest and React Testing Library',
-    image: '🧪',
-    duration: '4 hours',
-    lessons: 15,
-    rating: 4.7,
-    students: 2100,
-    category: 'Testing',
-  },
-  {
-    id: 7,
-    title: 'Git & GitHub Mastery',
-    description: 'Version control workflows for professional development',
-    image: '🔀',
-    duration: '2.5 hours',
-    lessons: 12,
-    rating: 4.8,
-    students: 3500,
-    category: 'DevOps',
-  },
-];
+import { cn } from '@/lib/utils';
 
 export default function Courses() {
-  return (
-    <DashboardLayout title="My Courses">
-      <div className="space-y-6">
-        <Tabs defaultValue="active" className="w-full">
-          <div className="flex items-center justify-between mb-6">
-            <TabsList>
-              <TabsTrigger value="active">Active Courses</TabsTrigger>
-              <TabsTrigger value="recommended">Recommended</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
-            </TabsList>
-            <Button variant="outline" size="sm">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
-          </div>
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const {
+    roadmapId,
+    roadmapTitle,
+    roadmapDescription,
+    weeks,
+    overallProgress,
+    started,
+    loading,
+    currentWeekNumber,
+    allWeeksCompleted,
+    refreshData,
+  } = useCourseData();
 
-          <TabsContent value="active" className="space-y-4">
-            {activeCourses.map((course) => (
-              <Card key={course.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+  const [starting, setStarting] = useState(false);
+
+  const handleStartCourse = async () => {
+    if (!user || !roadmapId) return;
+    setStarting(true);
+
+    try {
+      // Set week 1 to active
+      const week1 = weeks.find(w => w.week_number === 1);
+      if (week1) {
+        await (supabase
+          .from('roadmap_weeks') as any)
+          .update({ status: 'active' })
+          .eq('id', week1.id);
+
+        await refreshData();
+        toast.success('Course started! Begin with Week 1.');
+        navigate(`/learn/${week1.id}`);
+      }
+    } catch (error) {
+      toast.error('Failed to start course.');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const getWeekStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-success text-success-foreground';
+      case 'active': return 'gradient-primary text-white';
+      case 'extended': return 'bg-warning text-warning-foreground';
+      default: return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getWeekStatusLabel = (status: string) => {
+    switch (status) {
+      case 'completed': return 'Completed';
+      case 'active': return 'In Progress';
+      case 'extended': return 'Extended - Review Required';
+      case 'locked': return 'Locked';
+      default: return status;
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout title="My Course">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!roadmapId || weeks.length === 0) {
+    return (
+      <DashboardLayout title="My Course">
+        <Card className="text-center py-12">
+          <CardContent>
+            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 shadow-glow">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-xl font-display font-bold mb-2">No Course Yet</h2>
+            <p className="text-muted-foreground mb-4">
+              Complete your onboarding to generate a personalized learning course.
+            </p>
+            <Button asChild className="gradient-primary">
+              <Link to="/onboarding">Start Onboarding</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout title="My Course">
+      <div className="space-y-6">
+        {/* Course Header */}
+        <Card className="overflow-hidden">
+          <div className="gradient-primary p-6 text-white">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-2xl font-display font-bold mb-2">{roadmapTitle}</h2>
+                <p className="text-white/80">{roadmapDescription}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold">{overallProgress}%</p>
+                <p className="text-white/80 text-sm">Overall Progress</p>
+              </div>
+            </div>
+            <div className="mt-6">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span>
+                  {started
+                    ? currentWeekNumber > 0
+                      ? `Currently on Week ${currentWeekNumber}`
+                      : allWeeksCompleted ? 'All weeks completed!' : 'Course in progress'
+                    : 'Not started yet'}
+                </span>
+                <span>{weeks.length} weeks</span>
+              </div>
+              <Progress value={overallProgress} className="h-2 bg-white/20" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Start Course Button */}
+        {!started && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-lg">Ready to begin your learning journey?</h3>
+                <p className="text-muted-foreground">Click Start Course to unlock Week 1 and begin learning.</p>
+              </div>
+              <Button onClick={handleStartCourse} disabled={starting} className="gradient-primary" size="lg">
+                {starting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+                Start Course
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Final Assessment Card */}
+        {allWeeksCompleted && (
+          <Card className="border-2 border-primary bg-primary/5">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl gradient-primary">
+                  <Award className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Final Grand Assessment Unlocked! 🎉</h3>
+                  <p className="text-muted-foreground">All weeks completed. Take the final assessment to earn your certificate.</p>
+                </div>
+              </div>
+              <Button onClick={() => navigate('/final-assessment')} className="gradient-primary" size="lg">
+                <Trophy className="w-4 h-4 mr-2" />
+                Take Final Assessment
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Weeks List */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-lg">Course Weeks</h3>
+          {weeks.map((week) => {
+            const isAccessible = week.status === 'active' || week.status === 'completed' || week.status === 'extended';
+            const weekProgress = week.totalConcepts > 0 ? Math.round((week.completedConcepts / week.totalConcepts) * 100) : 0;
+
+            return (
+              <Card
+                key={week.id}
+                className={cn(
+                  'transition-all duration-200',
+                  !isAccessible && 'opacity-60',
+                  week.status === 'active' && 'ring-2 ring-primary shadow-glow',
+                  week.status === 'extended' && 'ring-2 ring-warning'
+                )}
+              >
                 <CardContent className="p-0">
                   <div className="flex flex-col md:flex-row">
-                    {/* Course Image/Icon */}
-                    <div className="md:w-48 h-32 md:h-auto bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-6xl">
-                      {course.image}
+                    {/* Week Number */}
+                    <div className={cn(
+                      'md:w-24 h-20 md:h-auto flex items-center justify-center text-2xl font-bold',
+                      getWeekStatusColor(week.status)
+                    )}>
+                      {week.status === 'completed' ? (
+                        <CheckCircle2 className="w-8 h-8" />
+                      ) : week.status === 'locked' ? (
+                        <Lock className="w-6 h-6" />
+                      ) : week.status === 'extended' ? (
+                        <AlertTriangle className="w-6 h-6" />
+                      ) : (
+                        week.week_number
+                      )}
                     </div>
-                    
-                    {/* Course Info */}
+
+                    {/* Week Info */}
                     <div className="flex-1 p-6">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <Badge variant="secondary" className="mb-2">
-                            {course.category}
-                          </Badge>
-                          <h3 className="text-xl font-display font-semibold">{course.title}</h3>
-                          <p className="text-muted-foreground mt-1">{course.description}</p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-display font-semibold">{week.title}</h3>
+                            <Badge variant={isAccessible ? 'default' : 'secondary'} className={cn(
+                              week.status === 'completed' && 'bg-success',
+                              week.status === 'extended' && 'bg-warning',
+                            )}>
+                              {getWeekStatusLabel(week.status)}
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground text-sm">{week.description}</p>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground">
+
+                      <div className="flex items-center gap-6 mt-3 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <BookOpen className="w-4 h-4" />
-                          {course.lessonsCompleted}/{course.totalLessons} lessons
+                          {week.completedConcepts}/{week.totalConcepts} concepts
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {course.duration}
-                        </span>
+                        {week.testScore !== null && (
+                          <span className="flex items-center gap-1">
+                            <Trophy className="w-4 h-4" />
+                            Test: {week.testScore}%
+                            {week.testPassed && <CheckCircle2 className="w-3 h-3 text-success" />}
+                          </span>
+                        )}
                       </div>
-                      
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between text-sm mb-2">
-                          <span className="font-medium">{course.progress}% complete</span>
-                        </div>
-                        <Progress value={course.progress} className="h-2" />
-                      </div>
+
+                      <Progress value={weekProgress} className="mt-3 h-2" />
                     </div>
-                    
+
                     {/* Action */}
                     <div className="p-6 flex items-center border-t md:border-t-0 md:border-l border-border">
-                      <Button className="gradient-primary">
-                        <Play className="w-4 h-4 mr-2" />
-                        Continue
-                      </Button>
+                      {isAccessible ? (
+                        <Button
+                          onClick={() => navigate(`/learn/${week.id}`)}
+                          className={cn(week.status === 'extended' ? 'bg-warning hover:bg-warning/90' : 'gradient-primary')}
+                        >
+                          {week.status === 'completed' ? (
+                            <>Review <ChevronRight className="w-4 h-4 ml-1" /></>
+                          ) : week.status === 'extended' ? (
+                            <>Review & Retry <AlertTriangle className="w-4 h-4 ml-1" /></>
+                          ) : (
+                            <><Play className="w-4 h-4 mr-2" /> Continue</>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button disabled variant="outline">
+                          <Lock className="w-4 h-4 mr-2" />
+                          Locked
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="recommended" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {recommendedCourses.map((course) => (
-                <Card key={course.id} className="overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center text-3xl">
-                        {course.image}
-                      </div>
-                      <div className="flex-1">
-                        <Badge variant="secondary" className="mb-2">
-                          {course.category}
-                        </Badge>
-                        <CardTitle className="text-lg">{course.title}</CardTitle>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="mb-4">{course.description}</CardDescription>
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {course.duration}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <BookOpen className="w-4 h-4" />
-                        {course.lessons} lessons
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-warning fill-warning" />
-                          {course.rating}
-                        </span>
-                        <span className="flex items-center gap-1 text-muted-foreground">
-                          <Users className="w-4 h-4" />
-                          {course.students.toLocaleString()}
-                        </span>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Enroll
-                        <ChevronRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="completed">
-            <Card className="text-center py-12">
-              <CardContent>
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">No completed courses yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Keep learning! Your completed courses will appear here.
-                </p>
-                <Button asChild>
-                  <Link to="/roadmap">Continue Learning</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            );
+          })}
+        </div>
       </div>
     </DashboardLayout>
   );

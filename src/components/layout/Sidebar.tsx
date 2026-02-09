@@ -11,18 +11,20 @@ import {
   Sparkles,
   MessageSquare,
   Rocket,
-  Bookmark
+  Bookmark,
+  Trophy
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'My Courses', href: '/courses', icon: BookOpen },
+  { name: 'My Course', href: '/courses', icon: BookOpen },
   { name: 'Roadmap', href: '/roadmap', icon: Map },
   { name: 'Progress', href: '/progress', icon: BarChart3 },
   { name: 'Schedule', href: '/schedule', icon: Calendar },
   { name: 'Weekly Check-in', href: '/weekly-checkin', icon: MessageSquare },
+  { name: 'Final Assessment', href: '/final-assessment', icon: Trophy },
   { name: 'Saved Insights', href: '/saved-recommendations', icon: Bookmark },
   { name: 'Next Level', href: '/next-level', icon: Rocket },
 ];

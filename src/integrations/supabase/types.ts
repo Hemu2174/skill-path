@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_feedback: {
+        Row: {
+          created_at: string
+          feedback: string
+          feedback_type: string
+          focus_topics: Json | null
+          id: string
+          user_id: string
+          weak_areas: Json | null
+          week_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          feedback: string
+          feedback_type?: string
+          focus_topics?: Json | null
+          id?: string
+          user_id: string
+          weak_areas?: Json | null
+          week_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          feedback?: string
+          feedback_type?: string
+          focus_topics?: Json | null
+          id?: string
+          user_id?: string
+          weak_areas?: Json | null
+          week_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_feedback_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessments: {
         Row: {
           answers: Json
@@ -75,6 +116,97 @@ export type Database = {
             columns: ["roadmap_id"]
             isOneToOne: false
             referencedRelation: "roadmaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concept_progress: {
+        Row: {
+          completed_at: string | null
+          concept_id: string
+          created_at: string
+          id: string
+          is_completed: boolean
+          practice_completed: boolean
+          updated_at: string
+          user_id: string
+          video_completed: boolean
+          video_watch_seconds: number
+        }
+        Insert: {
+          completed_at?: string | null
+          concept_id: string
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          practice_completed?: boolean
+          updated_at?: string
+          user_id: string
+          video_completed?: boolean
+          video_watch_seconds?: number
+        }
+        Update: {
+          completed_at?: string | null
+          concept_id?: string
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          practice_completed?: boolean
+          updated_at?: string
+          user_id?: string
+          video_completed?: boolean
+          video_watch_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_progress_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concepts: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          order_index: number
+          title: string
+          user_id: string
+          video_required_seconds: number
+          video_url: string | null
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          title: string
+          user_id: string
+          video_required_seconds?: number
+          video_url?: string | null
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          order_index?: number
+          title?: string
+          user_id?: string
+          video_required_seconds?: number
+          video_url?: string | null
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concepts_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_weeks"
             referencedColumns: ["id"]
           },
         ]
@@ -147,6 +279,7 @@ export type Database = {
           id: string
           is_current: boolean | null
           roadmap_id: string
+          status: string
           title: string
           week_number: number
         }
@@ -155,6 +288,7 @@ export type Database = {
           id?: string
           is_current?: boolean | null
           roadmap_id: string
+          status?: string
           title: string
           week_number: number
         }
@@ -163,6 +297,7 @@ export type Database = {
           id?: string
           is_current?: boolean | null
           roadmap_id?: string
+          status?: string
           title?: string
           week_number?: number
         }
@@ -283,6 +418,54 @@ export type Database = {
           },
         ]
       }
+      test_attempts: {
+        Row: {
+          answers: Json
+          created_at: string
+          id: string
+          passed: boolean
+          score: number
+          test_id: string
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          passed?: boolean
+          score?: number
+          test_id: string
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          id?: string
+          passed?: boolean
+          score?: number
+          test_id?: string
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_attempts_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_attempts_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_goals: {
         Row: {
           created_at: string
@@ -345,6 +528,41 @@ export type Database = {
           week_number?: number
         }
         Relationships: []
+      }
+      weekly_tests: {
+        Row: {
+          created_at: string
+          id: string
+          pass_threshold: number
+          questions: Json
+          user_id: string
+          week_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pass_threshold?: number
+          questions?: Json
+          user_id: string
+          week_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pass_threshold?: number
+          questions?: Json
+          user_id?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_tests_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_weeks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

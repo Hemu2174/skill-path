@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { AIMentorCard } from '@/components/AIMentorCard';
 import { supabase } from '@/integrations/supabase/client';
+import { useCourseData } from '@/hooks/useCourseData';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { 
   TrendingUp, 
@@ -20,7 +20,9 @@ import {
   ArrowRight,
   Lightbulb,
   Flame,
-  Trophy
+  Trophy,
+  BookOpen,
+  Loader2,
 } from 'lucide-react';
 
 interface WeeklyReport {
@@ -33,80 +35,50 @@ interface WeeklyReport {
   created_at: string;
 }
 
-// Simple local feedback used when storing weekly report summary
-const generateLocalFeedback = (tasksCompleted: number, hoursSpent: number, progressScore: number): string => {
-  if (progressScore >= 80) return `Outstanding week! ${tasksCompleted} tasks completed in ${hoursSpent}h. Keep it up!`;
-  if (progressScore >= 60) return `Great progress! ${tasksCompleted} tasks over ${hoursSpent}h. Focus on practice next.`;
-  if (progressScore >= 40) return `Steady progress with ${tasksCompleted} tasks. Try focused 25-min sessions.`;
-  return `${tasksCompleted} tasks this week. Break topics into smaller chunks and stay consistent!`;
-};
-
 export default function WeeklyCheckin() {
   const { user } = useAuth();
+  const { weeks, overallProgress, currentWeekNumber, loading: courseLoading } = useCourseData();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [currentReport, setCurrentReport] = useState<WeeklyReport | null>(null);
   const [previousReports, setPreviousReports] = useState<WeeklyReport[]>([]);
-  const [reflection, setReflection] = useState('');
   const [weekStats, setWeekStats] = useState({
-    tasksCompleted: 0,
+    conceptsCompleted: 0,
     hoursSpent: 0,
     progressScore: 0,
-    currentWeek: 1
+    currentWeek: 1,
+    testsPassed: 0,
   });
 
   useEffect(() => {
+    if (!user || courseLoading) return;
     fetchData();
-  }, [user]);
+  }, [user, courseLoading, weeks]);
 
   const fetchData = async () => {
     if (!user) return;
     
     try {
-      // Fetch completed tasks this week
-      const startOfWeek = new Date();
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-      
-      const { data: tasks } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_completed', true)
-        .gte('completed_at', startOfWeek.toISOString());
+      // Derive stats from real course data
+      const completedConcepts = weeks.reduce((a, w) => a + w.completedConcepts, 0);
+      const testsPassed = weeks.filter(w => w.testPassed).length;
 
-      const tasksCompleted = tasks?.length || 0;
-      const hoursSpent = (tasks?.reduce((acc, t) => acc + (t.duration_minutes || 0), 0) || 0) / 60;
-      
-      // Calculate progress score based on completion rate
-      const { data: allTasks } = await supabase
-        .from('tasks')
-        .select('*')
+      // Fetch watch time for hours calculation
+      const { data: conceptProgress } = await (supabase
+        .from('concept_progress' as any) as any)
+        .select('video_watch_seconds, is_completed')
         .eq('user_id', user.id);
-      
-      const totalTasks = allTasks?.length || 1;
-      const completedTasks = allTasks?.filter(t => t.is_completed).length || 0;
-      const progressScore = Math.round((completedTasks / totalTasks) * 100);
 
-      // Get current week number
-      const { data: roadmap } = await supabase
-        .from('roadmaps')
-        .select('start_date')
-        .eq('user_id', user.id)
-        .single();
-      
-      let currentWeek = 1;
-      if (roadmap?.start_date) {
-        const startDate = new Date(roadmap.start_date);
-        const now = new Date();
-        currentWeek = Math.ceil((now.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
-        currentWeek = Math.max(1, Math.min(currentWeek, 8));
-      }
+      const totalSeconds = (conceptProgress || []).reduce((acc: number, p: any) => acc + (p.video_watch_seconds || 0), 0);
+      const practiceMinutes = (conceptProgress || []).filter((p: any) => p.is_completed).length * 15;
+      const hoursSpent = Math.round(((totalSeconds / 3600) + (practiceMinutes / 60)) * 10) / 10;
 
       setWeekStats({
-        tasksCompleted,
-        hoursSpent: Math.round(hoursSpent * 10) / 10,
-        progressScore,
-        currentWeek
+        conceptsCompleted: completedConcepts,
+        hoursSpent,
+        progressScore: overallProgress,
+        currentWeek: currentWeekNumber || 1,
+        testsPassed,
       });
 
       // Fetch existing reports
@@ -117,9 +89,9 @@ export default function WeeklyCheckin() {
         .order('week_number', { ascending: false });
 
       if (reports && reports.length > 0) {
-        const current = reports.find(r => r.week_number === currentWeek);
+        const current = reports.find(r => r.week_number === (currentWeekNumber || 1));
         setCurrentReport(current || null);
-        setPreviousReports(reports.filter(r => r.week_number !== currentWeek));
+        setPreviousReports(reports.filter(r => r.week_number !== (currentWeekNumber || 1)));
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -134,21 +106,30 @@ export default function WeeklyCheckin() {
     setSubmitting(true);
     
     try {
-      const aiFeedback = generateLocalFeedback(
-        weekStats.tasksCompleted,
-        weekStats.hoursSpent,
-        weekStats.progressScore
-      );
+      // Use the weekly-feedback edge function for AI-powered check-in feedback
+      const response = await supabase.functions.invoke('weekly-feedback', {
+        body: {
+          weekTitle: `Week ${weekStats.currentWeek} Check-in`,
+          weekNumber: weekStats.currentWeek,
+          testScore: weekStats.progressScore,
+          testPassed: true,
+          correctAnswers: weekStats.conceptsCompleted,
+          totalQuestions: weeks.reduce((a, w) => a + w.totalConcepts, 0),
+        },
+      });
+
+      const aiFeedback = response.data?.feedback || 
+        `You've completed ${weekStats.conceptsCompleted} concepts and ${weekStats.testsPassed} tests in ${weekStats.hoursSpent}h of learning. Keep up the great work!`;
 
       const { data, error } = await supabase
         .from('weekly_reports')
         .insert({
           user_id: user.id,
           week_number: weekStats.currentWeek,
-          tasks_completed: weekStats.tasksCompleted,
+          tasks_completed: weekStats.conceptsCompleted,
           hours_spent: weekStats.hoursSpent,
           progress_score: weekStats.progressScore,
-          ai_feedback: aiFeedback
+          ai_feedback: aiFeedback,
         })
         .select()
         .single();
@@ -163,6 +144,16 @@ export default function WeeklyCheckin() {
       setSubmitting(false);
     }
   };
+
+  if (loading || courseLoading) {
+    return (
+      <DashboardLayout title="Weekly Check-in">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Weekly Check-in">
@@ -196,12 +187,12 @@ export default function WeeklyCheckin() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Tasks Completed</p>
-                  <p className="text-2xl font-bold">{weekStats.tasksCompleted}</p>
-                  <p className="text-xs text-muted-foreground mt-1">This week</p>
+                  <p className="text-sm text-muted-foreground">Concepts Completed</p>
+                  <p className="text-2xl font-bold">{weekStats.conceptsCompleted}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Total mastered</p>
                 </div>
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                  <CheckCircle2 className="w-5 h-5" />
+                  <BookOpen className="w-5 h-5" />
                 </div>
               </div>
             </CardContent>
@@ -213,7 +204,7 @@ export default function WeeklyCheckin() {
                 <div>
                   <p className="text-sm text-muted-foreground">Hours Invested</p>
                   <p className="text-2xl font-bold">{weekStats.hoursSpent}h</p>
-                  <p className="text-xs text-muted-foreground mt-1">Learning time</p>
+                  <p className="text-xs text-muted-foreground mt-1">Video + Practice</p>
                 </div>
                 <div className="p-2 rounded-lg bg-chart-2/10 text-chart-2">
                   <Clock className="w-5 h-5" />
@@ -226,9 +217,9 @@ export default function WeeklyCheckin() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Progress Score</p>
+                  <p className="text-sm text-muted-foreground">Overall Progress</p>
                   <p className="text-2xl font-bold">{weekStats.progressScore}%</p>
-                  <p className="text-xs text-muted-foreground mt-1">Overall</p>
+                  <p className="text-xs text-muted-foreground mt-1">Course completion</p>
                 </div>
                 <div className="p-2 rounded-lg bg-chart-3/10 text-chart-3">
                   <TrendingUp className="w-5 h-5" />
@@ -241,12 +232,12 @@ export default function WeeklyCheckin() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Current Week</p>
-                  <p className="text-2xl font-bold">Week {weekStats.currentWeek}</p>
-                  <p className="text-xs text-muted-foreground mt-1">of your journey</p>
+                  <p className="text-sm text-muted-foreground">Tests Passed</p>
+                  <p className="text-2xl font-bold">{weekStats.testsPassed}/{weeks.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Weekly tests</p>
                 </div>
                 <div className="p-2 rounded-lg bg-warning/10 text-warning">
-                  <Target className="w-5 h-5" />
+                  <Trophy className="w-5 h-5" />
                 </div>
               </div>
             </CardContent>
@@ -273,14 +264,14 @@ export default function WeeklyCheckin() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="bg-card rounded-lg p-6 border border-border">
-                <p className="text-lg leading-relaxed">{currentReport.ai_feedback}</p>
+              <div className="bg-card rounded-lg p-6 border border-border whitespace-pre-wrap">
+                {currentReport.ai_feedback}
               </div>
               
               <div className="grid grid-cols-3 gap-4 mt-6">
                 <div className="text-center p-4 bg-card rounded-lg border border-border">
                   <p className="text-2xl font-bold text-primary">{currentReport.tasks_completed}</p>
-                  <p className="text-sm text-muted-foreground">Tasks Done</p>
+                  <p className="text-sm text-muted-foreground">Concepts Done</p>
                 </div>
                 <div className="text-center p-4 bg-card rounded-lg border border-border">
                   <p className="text-2xl font-bold text-chart-2">{currentReport.hours_spent}h</p>
@@ -311,15 +302,15 @@ export default function WeeklyCheckin() {
           </Card>
         )}
 
-        {/* AI Mentor - Personalized Recommendations */}
+        {/* AI Mentor */}
         <AIMentorCard />
 
-        {/* Tips Section */}
+        {/* Tips */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lightbulb className="w-5 h-5 text-warning" />
-              Learning Tips for Week {weekStats.currentWeek + 1}
+              Learning Tips
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -376,7 +367,7 @@ export default function WeeklyCheckin() {
                   </div>
                   <p className="text-sm line-clamp-2">{report.ai_feedback}</p>
                   <div className="flex gap-4 mt-3 text-sm text-muted-foreground">
-                    <span>{report.tasks_completed} tasks</span>
+                    <span>{report.tasks_completed} concepts</span>
                     <span>{report.hours_spent}h spent</span>
                     <span>{report.progress_score}% score</span>
                   </div>

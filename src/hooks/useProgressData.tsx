@@ -1,28 +1,34 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCourseData } from '@/hooks/useCourseData';
 
-interface TaskCompletionData {
+interface WeekCompletionData {
   date: string;
   completed: number;
   total: number;
 }
 
 interface ProgressStats {
-  totalTasks: number;
-  completedTasks: number;
+  totalConcepts: number;
+  completedConcepts: number;
   hoursSpent: number;
   currentStreak: number;
+  testsPassed: number;
+  totalTests: number;
 }
 
 export function useProgressData() {
   const { user } = useAuth();
-  const [taskCompletionData, setTaskCompletionData] = useState<TaskCompletionData[]>([]);
+  const { weeks } = useCourseData();
+  const [taskCompletionData, setTaskCompletionData] = useState<WeekCompletionData[]>([]);
   const [stats, setStats] = useState<ProgressStats>({
-    totalTasks: 0,
-    completedTasks: 0,
+    totalConcepts: 0,
+    completedConcepts: 0,
     hoursSpent: 0,
     currentStreak: 0,
+    testsPassed: 0,
+    totalTests: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -34,84 +40,63 @@ export function useProgressData() {
 
     const fetchProgressData = async () => {
       try {
-        // Fetch all tasks for the user
-        const { data: tasks, error: tasksError } = await supabase
-          .from('tasks')
-          .select('*, roadmap_weeks!inner(roadmap_id, week_number)')
+        // Fetch concept progress for hours & streak
+        const { data: conceptProgress } = await (supabase
+          .from('concept_progress' as any) as any)
+          .select('video_watch_seconds, is_completed, completed_at')
           .eq('user_id', user.id);
 
-        if (tasksError) throw tasksError;
+        const progress = conceptProgress || [];
 
-        // Calculate stats
-        const totalTasks = tasks?.length || 0;
-        const completedTasks = tasks?.filter(t => t.is_completed)?.length || 0;
-        const totalMinutes = tasks?.reduce((acc, t) => acc + (t.is_completed ? (t.duration_minutes || 30) : 0), 0) || 0;
-        const hoursSpent = Math.round(totalMinutes / 60 * 10) / 10;
+        // Total watch time in hours
+        const totalSeconds = progress.reduce((acc: number, p: any) => acc + (p.video_watch_seconds || 0), 0);
+        // Add ~15 min per completed practice
+        const practiceMinutes = progress.filter((p: any) => p.is_completed).length * 15;
+        const hoursSpent = Math.round(((totalSeconds / 3600) + (practiceMinutes / 60)) * 10) / 10;
 
-        // Calculate streak (consecutive days with completed tasks)
-        const completedDates = tasks
-          ?.filter(t => t.completed_at)
-          .map(t => new Date(t.completed_at!).toDateString())
-          .filter((v, i, a) => a.indexOf(v) === i)
-          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+        // Streak from completed_at dates
+        const completedDates = progress
+          .filter((p: any) => p.completed_at)
+          .map((p: any) => new Date(p.completed_at).toDateString())
+          .filter((v: string, i: number, a: string[]) => a.indexOf(v) === i)
+          .sort((a: string, b: string) => new Date(b).getTime() - new Date(a).getTime());
 
         let streak = 0;
-        if (completedDates && completedDates.length > 0) {
+        if (completedDates.length > 0) {
           const today = new Date().toDateString();
           const yesterday = new Date(Date.now() - 86400000).toDateString();
-          
           if (completedDates[0] === today || completedDates[0] === yesterday) {
             streak = 1;
             for (let i = 1; i < completedDates.length; i++) {
-              const prevDate = new Date(completedDates[i - 1]);
-              const currDate = new Date(completedDates[i]);
-              const diffDays = Math.round((prevDate.getTime() - currDate.getTime()) / 86400000);
-              
-              if (diffDays === 1) {
+              const prev = new Date(completedDates[i - 1]);
+              const curr = new Date(completedDates[i]);
+              if (Math.round((prev.getTime() - curr.getTime()) / 86400000) === 1) {
                 streak++;
-              } else {
-                break;
-              }
+              } else break;
             }
           }
         }
+
+        // Derive totals from useCourseData weeks
+        const totalConcepts = weeks.reduce((a, w) => a + w.totalConcepts, 0);
+        const completedConcepts = weeks.reduce((a, w) => a + w.completedConcepts, 0);
+        const testsPassed = weeks.filter(w => w.testPassed).length;
 
         setStats({
-          totalTasks,
-          completedTasks,
+          totalConcepts,
+          completedConcepts,
           hoursSpent,
           currentStreak: streak,
+          testsPassed,
+          totalTests: weeks.length,
         });
 
-        // Generate weekly completion data for chart
-        const weeklyData: Record<string, { completed: number; total: number }> = {};
-        
-        // Get last 6 weeks
-        for (let i = 5; i >= 0; i--) {
-          const weekStart = new Date();
-          weekStart.setDate(weekStart.getDate() - (i * 7));
-          const weekLabel = `Week ${6 - i}`;
-          weeklyData[weekLabel] = { completed: 0, total: 0 };
-        }
-
-        // Group tasks by week
-        tasks?.forEach(task => {
-          const weekNum = (task.roadmap_weeks as any)?.week_number || 1;
-          const weekLabel = `Week ${Math.min(weekNum, 6)}`;
-          if (weeklyData[weekLabel]) {
-            weeklyData[weekLabel].total++;
-            if (task.is_completed) {
-              weeklyData[weekLabel].completed++;
-            }
-          }
-        });
-
-        const chartData = Object.entries(weeklyData).map(([date, data]) => ({
-          date,
-          completed: data.completed,
-          total: data.total,
+        // Chart data per week
+        const chartData = weeks.map(w => ({
+          date: `Week ${w.week_number}`,
+          completed: w.completedConcepts,
+          total: w.totalConcepts,
         }));
-
         setTaskCompletionData(chartData);
       } catch (error) {
         console.error('Error fetching progress data:', error);
@@ -121,28 +106,7 @@ export function useProgressData() {
     };
 
     fetchProgressData();
-
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel('progress-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tasks',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchProgressData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
+  }, [user, weeks]);
 
   return { taskCompletionData, stats, loading };
 }

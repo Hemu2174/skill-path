@@ -11,7 +11,9 @@ import {
   Award,
   ArrowUp,
   ChevronRight,
-  Loader2
+  Loader2,
+  Trophy,
+  BookOpen,
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -24,22 +26,15 @@ import {
   AreaChart,
   Area,
   ComposedChart,
-  Line
 } from 'recharts';
 import { useProgressData } from '@/hooks/useProgressData';
 import { useSkillsProgress } from '@/hooks/useSkillsProgress';
-
-const achievements = [
-  { id: 1, title: 'First Steps', description: 'Complete your first lesson', earned: true, icon: '🎯' },
-  { id: 2, title: 'Week Warrior', description: 'Study every day for a week', earned: true, icon: '🔥' },
-  { id: 3, title: 'Quiz Master', description: 'Score 100% on any quiz', earned: true, icon: '🏆' },
-  { id: 4, title: 'Project Builder', description: 'Complete your first project', earned: false, icon: '🚀' },
-  { id: 5, title: 'Speed Learner', description: 'Complete 5 lessons in a day', earned: false, icon: '⚡' },
-];
+import { useCourseData } from '@/hooks/useCourseData';
 
 export default function Progress() {
   const { taskCompletionData, stats, loading } = useProgressData();
   const { skills: skillsData, loading: skillsLoading } = useSkillsProgress();
+  const { weeks, allWeeksCompleted } = useCourseData();
 
   if (loading) {
     return (
@@ -51,9 +46,20 @@ export default function Progress() {
     );
   }
 
-  const completionPercentage = stats.totalTasks > 0 
-    ? Math.round((stats.completedTasks / stats.totalTasks) * 100) 
+  const completionPercentage = stats.totalConcepts > 0 
+    ? Math.round((stats.completedConcepts / stats.totalConcepts) * 100) 
     : 0;
+
+  // Dynamic achievements based on real data
+  const achievements = [
+    { id: 1, title: 'First Steps', description: 'Complete your first concept', earned: stats.completedConcepts >= 1, icon: '🎯' },
+    { id: 2, title: 'Streak Starter', description: 'Achieve a 3-day learning streak', earned: stats.currentStreak >= 3, icon: '🔥' },
+    { id: 3, title: 'Test Ace', description: 'Pass your first weekly test', earned: stats.testsPassed >= 1, icon: '🏆' },
+    { id: 4, title: 'Half Way', description: 'Complete 50% of all concepts', earned: completionPercentage >= 50, icon: '🚀' },
+    { id: 5, title: 'Course Master', description: 'Complete the entire course', earned: allWeeksCompleted, icon: '⚡' },
+  ];
+
+  const earnedCount = achievements.filter(a => a.earned).length;
 
   return (
     <DashboardLayout title="Progress">
@@ -82,15 +88,15 @@ export default function Progress() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Tasks Done</p>
-                  <p className="text-2xl font-bold">{stats.completedTasks}/{stats.totalTasks}</p>
+                  <p className="text-sm text-muted-foreground">Concepts Done</p>
+                  <p className="text-2xl font-bold">{stats.completedConcepts}/{stats.totalConcepts}</p>
                   <div className="flex items-center gap-1 text-sm text-success mt-1">
                     <ArrowUp className="w-3 h-3" />
                     <span>{completionPercentage}% complete</span>
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-chart-2/10 text-chart-2">
-                  <Target className="w-6 h-6" />
+                  <BookOpen className="w-6 h-6" />
                 </div>
               </div>
             </CardContent>
@@ -117,12 +123,12 @@ export default function Progress() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Achievements</p>
-                  <p className="text-2xl font-bold">3/5</p>
-                  <p className="text-sm text-muted-foreground mt-1">2 more to unlock</p>
+                  <p className="text-sm text-muted-foreground">Tests Passed</p>
+                  <p className="text-2xl font-bold">{stats.testsPassed}/{stats.totalTests}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{earnedCount} achievements</p>
                 </div>
                 <div className="p-3 rounded-xl bg-chart-3/10 text-chart-3">
-                  <Award className="w-6 h-6" />
+                  <Trophy className="w-6 h-6" />
                 </div>
               </div>
             </CardContent>
@@ -131,13 +137,12 @@ export default function Progress() {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Task Completion Over Time */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Task Completion Over Time</CardTitle>
-                  <CardDescription>Completed vs total tasks by week</CardDescription>
+                  <CardTitle>Concept Completion by Week</CardTitle>
+                  <CardDescription>Completed vs total concepts per week</CardDescription>
                 </div>
                 <Badge variant="secondary">Real-time</Badge>
               </div>
@@ -150,53 +155,26 @@ export default function Progress() {
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                       <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                      />
-                      <Bar 
-                        dataKey="total" 
-                        fill="hsl(var(--muted))" 
-                        radius={[4, 4, 0, 0]}
-                        name="Total Tasks"
-                      />
-                      <Bar 
-                        dataKey="completed" 
-                        fill="hsl(var(--primary))" 
-                        radius={[4, 4, 0, 0]}
-                        name="Completed"
-                      />
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                      <Bar dataKey="total" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} name="Total Concepts" />
+                      <Bar dataKey="completed" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Completed" />
                     </ComposedChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <p>Complete tasks to see your progress here</p>
+                    <p>Complete concepts to see your progress here</p>
                   </div>
                 )}
-              </div>
-              <div className="flex items-center justify-center gap-6 mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-primary" />
-                  <span className="text-sm text-muted-foreground">Completed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-muted" />
-                  <span className="text-sm text-muted-foreground">Total</span>
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Completion Rate Area Chart */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Completion Rate</CardTitle>
-                  <CardDescription>Task completion trend by week</CardDescription>
+                  <CardDescription>Concept completion trend by week</CardDescription>
                 </div>
                 <Badge variant="secondary">Trending</Badge>
               </div>
@@ -205,12 +183,10 @@ export default function Progress() {
               <div className="h-[280px]">
                 {taskCompletionData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart 
-                      data={taskCompletionData.map(d => ({
-                        ...d,
-                        rate: d.total > 0 ? Math.round((d.completed / d.total) * 100) : 0
-                      }))}
-                    >
+                    <AreaChart data={taskCompletionData.map(d => ({
+                      ...d,
+                      rate: d.total > 0 ? Math.round((d.completed / d.total) * 100) : 0
+                    }))}>
                       <defs>
                         <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
@@ -219,32 +195,14 @@ export default function Progress() {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <YAxis 
-                        stroke="hsl(var(--muted-foreground))" 
-                        fontSize={12} 
-                        domain={[0, 100]}
-                        tickFormatter={(value) => `${value}%`}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                        formatter={(value) => [`${value}%`, 'Completion Rate']}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="rate" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={2}
-                        fill="url(#colorRate)"
-                      />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} formatter={(value) => [`${value}%`, 'Completion Rate']} />
+                      <Area type="monotone" dataKey="rate" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#colorRate)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <p>Start completing tasks to track your progress</p>
+                    <p>Start completing concepts to track your progress</p>
                   </div>
                 )}
               </div>
@@ -254,18 +212,13 @@ export default function Progress() {
 
         {/* Skills & Achievements */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Skills Progress */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Skills Progress</CardTitle>
-                  <CardDescription>Your skill development over time</CardDescription>
+                  <CardDescription>Concept mastery per week topic</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -281,7 +234,7 @@ export default function Progress() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">{skill.level}%</span>
                         <Badge variant="secondary" className="text-xs">
-                          {skill.tasksCompleted}/{skill.totalTasks} tasks
+                          {skill.tasksCompleted}/{skill.totalTasks} concepts
                         </Badge>
                       </div>
                     </div>
@@ -296,18 +249,14 @@ export default function Progress() {
             </CardContent>
           </Card>
 
-          {/* Achievements */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Achievements</CardTitle>
-                  <CardDescription>Milestones you've reached</CardDescription>
+                  <CardDescription>Milestones based on your real progress</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm">
-                  View All
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
+                <Badge variant="secondary">{earnedCount}/{achievements.length}</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">

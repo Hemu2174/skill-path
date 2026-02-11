@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useCourseData } from '@/hooks/useCourseData';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import { Progress } from '@/components/ui/progress';
 import { 
   Rocket, 
   Star, 
-  ArrowRight, 
   BookOpen, 
   Code, 
   Briefcase, 
@@ -48,7 +48,6 @@ const advancedPathsByRole: Record<string, AdvancedPath[]> = {
   ],
 };
 
-// Default paths for roles without specific ones
 const defaultPaths: AdvancedPath[] = [
   { id: 'leadership', title: 'Technical Leadership', description: 'Develop skills for leading engineering teams and driving technical strategy.', topics: ['Code Reviews', 'Architecture Decisions', 'Mentoring', 'Technical Writing'], difficulty: 'Advanced', estimatedWeeks: 8, icon: <Briefcase className="w-6 h-6" /> },
   { id: 'open-source', title: 'Open Source Contribution', description: 'Learn to contribute to and maintain open source projects effectively.', topics: ['Git Workflows', 'Documentation', 'Community Building', 'CI/CD'], difficulty: 'Intermediate', estimatedWeeks: 4, icon: <BookOpen className="w-6 h-6" /> },
@@ -57,29 +56,26 @@ const defaultPaths: AdvancedPath[] = [
 
 export default function NextLevel() {
   const { user } = useAuth();
+  const { overallProgress, loading: courseLoading } = useCourseData();
   const [loading, setLoading] = useState(true);
-  const [completionPct, setCompletionPct] = useState(0);
   const [targetRole, setTargetRole] = useState('');
   const [roleName, setRoleName] = useState('');
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || courseLoading) return;
     fetchData();
-  }, [user]);
+  }, [user, courseLoading]);
 
   const fetchData = async () => {
     if (!user) return;
     try {
-      const [tasksRes, goalsRes] = await Promise.all([
-        supabase.from('tasks').select('is_completed').eq('user_id', user.id),
-        supabase.from('user_goals').select('target_role').eq('user_id', user.id).maybeSingle(),
-      ]);
+      const { data: goals } = await supabase
+        .from('user_goals')
+        .select('target_role')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      const tasks = tasksRes.data || [];
-      const completed = tasks.filter(t => t.is_completed).length;
-      setCompletionPct(tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0);
-
-      const role = goalsRes.data?.target_role || '';
+      const role = goals?.target_role || '';
       setTargetRole(role);
 
       const roleNames: Record<string, string> = {
@@ -97,7 +93,7 @@ export default function NextLevel() {
 
   const paths = advancedPathsByRole[targetRole] || defaultPaths;
 
-  if (loading) {
+  if (loading || courseLoading) {
     return (
       <DashboardLayout title="Next Level">
         <div className="flex items-center justify-center h-64">
@@ -110,44 +106,41 @@ export default function NextLevel() {
   return (
     <DashboardLayout title="Next Level">
       <div className="space-y-6">
-        {/* Header */}
         <div className="text-center max-w-2xl mx-auto">
           <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 shadow-glow">
             <Rocket className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl font-display font-bold mb-2">Next-Level Learning Paths</h2>
           <p className="text-muted-foreground">
-            {completionPct >= 80
+            {overallProgress >= 80
               ? `Congratulations on your progress as a ${roleName}! Here are advanced paths to continue your growth.`
-              : `You're ${completionPct}% through your current roadmap. Complete more tasks to unlock these advanced paths!`}
+              : `You're ${overallProgress}% through your current course. Complete more to unlock these advanced paths!`}
           </p>
         </div>
 
-        {/* Current Progress */}
         <Card className="max-w-2xl mx-auto">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <Trophy className="w-5 h-5 text-warning" />
-                <span className="font-medium">Current Roadmap Progress</span>
+                <span className="font-medium">Current Course Progress</span>
               </div>
-              <Badge variant={completionPct >= 80 ? 'default' : 'secondary'}>
-                {completionPct}%
+              <Badge variant={overallProgress >= 80 ? 'default' : 'secondary'}>
+                {overallProgress}%
               </Badge>
             </div>
-            <Progress value={completionPct} className="h-3" />
-            {completionPct < 80 && (
+            <Progress value={overallProgress} className="h-3" />
+            {overallProgress < 80 && (
               <p className="text-sm text-muted-foreground mt-2">
-                Reach 80% to fully unlock advanced paths. <Link to="/roadmap" className="text-primary hover:underline">Continue your roadmap →</Link>
+                Reach 80% to fully unlock advanced paths. <Link to="/courses" className="text-primary hover:underline">Continue your course →</Link>
               </p>
             )}
           </CardContent>
         </Card>
 
-        {/* Advanced Paths */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {paths.map((path) => {
-            const isLocked = completionPct < 50;
+            const isLocked = overallProgress < 50;
             return (
               <Card
                 key={path.id}
@@ -184,7 +177,7 @@ export default function NextLevel() {
                     variant={isLocked ? 'outline' : 'default'}
                     disabled={isLocked}
                   >
-                    {isLocked ? 'Complete current roadmap first' : 'Coming Soon'}
+                    {isLocked ? 'Complete current course first' : 'Coming Soon'}
                     {!isLocked && <Sparkles className="w-4 h-4 ml-2" />}
                   </Button>
                 </CardContent>

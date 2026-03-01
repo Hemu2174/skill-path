@@ -42,6 +42,49 @@ interface ConceptProgressData {
   is_completed: boolean;
 }
 
+const getVideoUrls = (videoUrl: string) => {
+  const trimmed = videoUrl.trim();
+  if (!trimmed) {
+    return { embedUrl: '', watchUrl: '' };
+  }
+
+  // If a plain YouTube ID is stored, build URLs directly.
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return {
+      embedUrl: `https://www.youtube-nocookie.com/embed/${trimmed}?rel=0`,
+      watchUrl: `https://www.youtube.com/watch?v=${trimmed}`,
+    };
+  }
+
+  try {
+    const url = new URL(trimmed);
+    let id = '';
+
+    if (url.hostname.includes('youtu.be')) {
+      id = url.pathname.replace('/', '');
+    } else if (url.hostname.includes('youtube.com')) {
+      if (url.pathname.startsWith('/shorts/')) {
+        id = url.pathname.split('/shorts/')[1] || '';
+      } else if (url.pathname.startsWith('/embed/')) {
+        id = url.pathname.split('/embed/')[1] || '';
+      } else {
+        id = url.searchParams.get('v') || '';
+      }
+    }
+
+    if (id) {
+      return {
+        embedUrl: `https://www.youtube-nocookie.com/embed/${id}?rel=0`,
+        watchUrl: `https://www.youtube.com/watch?v=${id}`,
+      };
+    }
+  } catch {
+    // Fall through to use the provided URL as-is.
+  }
+
+  return { embedUrl: trimmed, watchUrl: trimmed };
+};
+
 export default function CourseLearning() {
   const { weekId } = useParams<{ weekId: string }>();
   const { user } = useAuth();
@@ -64,6 +107,10 @@ export default function CourseLearning() {
 
   const activeConcept = concepts[activeConceptIndex];
   const activeProgress = activeConcept ? progressMap[activeConcept.id] : null;
+  const effectiveVideoUrl = activeConcept?.video_url || '';
+  const activeVideoLinks = effectiveVideoUrl
+    ? getVideoUrls(effectiveVideoUrl)
+    : null;
 
   const fetchData = useCallback(async () => {
     if (!user || !weekId) return;
@@ -384,17 +431,29 @@ export default function CourseLearning() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {activeConcept.video_url ? (
+                    {effectiveVideoUrl ? (
                       <div className="space-y-4">
                         <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
                           <iframe
-                            src={`https://www.youtube.com/embed/${activeConcept.video_url}?rel=0`}
+                            src={activeVideoLinks?.embedUrl || ''}
                             className="absolute inset-0 w-full h-full"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
                             title={activeConcept.title}
                           />
                         </div>
+                        {activeVideoLinks?.watchUrl && (
+                          <div className="flex items-center gap-3">
+                            <Button asChild variant="outline" size="sm">
+                              <a href={activeVideoLinks.watchUrl} target="_blank" rel="noreferrer">
+                                Open on YouTube
+                              </a>
+                            </Button>
+                            <span className="text-xs text-muted-foreground">
+                              If the embed is unavailable, open the video in a new tab.
+                            </span>
+                          </div>
+                        )}
                         {!activeProgress?.video_completed && (
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">

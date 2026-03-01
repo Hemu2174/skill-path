@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,8 +36,22 @@ export default function Auth() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Welcome back!');
-      navigate('/dashboard');
+      // Check if user has completed onboarding
+      const { data: userGoals } = await supabase
+        .from('user_goals')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+
+      if (!userGoals) {
+        // User hasn't completed onboarding yet
+        toast.info('Complete onboarding to get started');
+        navigate('/onboarding');
+      } else {
+        // User has completed onboarding
+        toast.success('Welcome back!');
+        navigate('/dashboard');
+      }
     }
   };
 
